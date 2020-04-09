@@ -6,7 +6,7 @@
 :tags: fraud,journalism,panama papers
 :author:
 :use-load-script: 
-:use-dump-file: data/icij-panama-papers.dump
+:use-dump-file: https://graph-examples-dump-files.s3.amazonaws.com/icij-panama-papers.dump
 :use-plugin: 
 :target-db-version: 3.5.14
 :bloom-perspective: 
