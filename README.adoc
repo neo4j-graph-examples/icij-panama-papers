@@ -1,0 +1,34 @@
+:name: icij-panama-papers
+:long_name: Panama Papers by ICIJ
+:description: The Panama Papers dataset and guide from the International Consortium of Investigative Journalists (ICIJ).
+:icon: 
+:logo: 
+:tags: fraud,journalism,panama papers
+:author:
+:use-load-script: 
+:use-dump-file: data/icij-panama-papers.dump
+:use-plugin: 
+:target-db-version: 3.5.14
+:bloom-perspective: 
+:guide: 
+:rendered-guide: https://guides.neo4j.com/sandbox/icij-panama-papers/index.html
+:model: documentation/img/datamodel.png
+:model-guide:
+:todo: locate unrendered guide, update links in unrendered guide, locate the associated logo/icons
+image::{logo}[]
+
+= {long_name} Graph Example
+
+Description: {description}
+
+TODO: {todo}
+
+Data Model: {model}
+
+=== Setup
+
+This is for version: {target-db-version}
+
+unrendered guide: {guide}
+
+rendered guide available from: {rendered-guide}
