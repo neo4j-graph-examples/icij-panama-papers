@@ -17,13 +17,14 @@
 :todo: locate unrendered guide, update links in unrendered guide, locate the associated logo/icons
 image::{logo}[]
 
+
 = {long_name} Graph Example
 
 Description: {description}
 
 TODO: {todo}
 
-Data Model: {model}
+image::{model}[]
 
 === Setup
 
