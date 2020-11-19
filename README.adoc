@@ -1,35 +1,64 @@
 :name: icij-panama-papers
 :long_name: Panama Papers by ICIJ
-:description: The Panama Papers dataset and guide from the International Consortium of Investigative Journalists (ICIJ).
+:description: The Panama Papers dataset and guide from the International Consortium of Investigative Journalists (ICIJ)
 :icon: 
-:logo: 
-:tags: fraud,journalism,panama papers
-:author:
-:use-load-script: 
-:use-dump-file: https://graph-examples-dump-files.s3.amazonaws.com/icij-panama-papers.dump
-:use-plugin: 
+:logo: documentation/img/icij-logo.png
+:tags: example-data,dataset,fraud-data,data-leaks,panama-papers, icij
+:author: William Lyon
+:use-load-script:
+:data:
+:use-dump-file: data/icij-panama-papers-40.dump
+:use-plugin:
 :target-db-version: 3.5.14
-:bloom-perspective: 
-:guide: 
+:bloom-perspective: bloom/icij-panama-papers.bloom-perspective
+:guide: documentation/icij-panama-papers.neo4j-browser-guide
 :rendered-guide: https://guides.neo4j.com/sandbox/icij-panama-papers/index.html
 :model: documentation/img/datamodel.png
+:example: documentation/img/example.png
+
+:query: MATCH (a:Officer {name: $name})-[r:OFFICER_OF|INTERMEDIARY_OF|REGISTERED_ADDRESS*..5]-(b) +
+RETURN distinct b.name as name LIMIT 20 +
+
+:param-name: name
+:param-value: Stuart Onslow-Smith
+:result-column: name
+:expected-result: Bright Avenue Inc.
+
 :model-guide:
-:todo: locate unrendered guide, update links in unrendered guide, locate the associated logo/icons
-image::{logo}[]
+:todo: 
+image::{logo}[width=100]
 
+== {long_name} Graph Example
 
-= {long_name} Graph Example
+Description: _{description}_
 
-Description: {description}
-
-TODO: {todo}
-
+.Model
 image::{model}[]
+
+.Example
+image::{example}[width=600]
+
+.Example Query:
+[source,cypher,subs=attributes]
+----
+{query}
+----
 
 === Setup
 
-This is for version: {target-db-version}
+This is for version: `{target-db-version}`
 
-unrendered guide: {guide}
+Rendered guide available from: `:play icij-panama-papers` 
+// or `:play {rendered-guide}``
 
-rendered guide available from: {rendered-guide}
+Unrendered guide: link:{guide}[]
+
+Data files: `{use-dump-file}`
+
+=== Code Examples
+
+* link:code/javascript/example.js[JavaScript]
+* link:code/java/Example.java[Java]
+* link:code/csharp/Example.cs[C#]
+* link:code/python/example.py[Python]
+* link:code/go/example.go[Go]
