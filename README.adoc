@@ -1,5 +1,5 @@
 :name: icij-panama-papers
-:long_name: Panama Papers by ICIJ
+:long-name: Panama Papers by ICIJ
 :description: The Panama Papers dataset and guide from the International Consortium of Investigative Journalists (ICIJ)
 :icon: 
 :logo: documentation/img/icij-logo.png
@@ -28,7 +28,7 @@ RETURN distinct b.name as name LIMIT 20 +
 :todo: 
 image::{logo}[width=100]
 
-== {long_name} Graph Example
+== {long-name} Graph Example
 
 Description: _{description}_
 
@@ -45,6 +45,8 @@ image::{example}[width=600]
 ----
 
 === Setup
+
+*NOTE:* Due to the size of the data files, you will need `git-lfs` installed to clone this repository. You can install via homebrew and other package managers, or you can also download the library. For more details, see Github's https://git-lfs.github.com/[page^] for information on git-lfs.
 
 This is for version: `{target-db-version}`
 
