@@ -1,0 +1,191 @@
+image:https://guides.neo4j.com/sandbox/icij-panama-papers/img/panama-header.jpg[image]
+
+== The Data Connecting Politicians, Criminals and a Rogue Industry that hides their cash
+
+== Panama Papers: Secrets of the Global Elite
+
+== About this data
+
+The https://offshoreleaks.icij.org/[ICIJ Offshore Leaks database], which
+you are working with in Neo4j, contains information on almost 350,000
+offshore entities that are part of the Paradise and Panama Papers and
+the Offshore Leaks investigations. The data covers a long time of
+activities – and links to people and companies in more than 200
+countries and territories.
+
+The real value of the database is that it *strips away the secrecy* that
+cloaks companies and trusts incorporated in tax havens and exposes the
+people behind them. This includes, when available, the names of the real
+owners of those opaque structures. In all, it reveals more than 430,000
+names of people and companies behind secret offshore structures. They
+come from leaked records and not a standardized corporate registry, so
+there may be duplicates. We suggest you confirm the identities of any
+individuals or entities located in the database based on addresses or
+other identifiable information.
+
+*There are legitimate uses for offshore companies and trusts. We do not
+intend to suggest or imply that any persons, companies or other entities
+included in the database have broken the law or otherwise acted
+improperly. If you find an error in the database please get in touch
+with ICIJ.*
+
+== The Shape of the Data
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel.png[data
+model]
+
+The Offshore Leaks Database was imported into Neo4j to be used by
+journalists and researchers to take advantage of the connections in the
+data. To the left is the basic "property graph" data model. Each data
+record is called a "node" representing an entity, intermediary, officer
+or address. They're connected to form a "graph" that reveals a complex
+web of relationships. To the left you can see a simplified diagram how
+the nodes connect to each other.
+
+These are the types of nodes that you will encounter in the data:
+
+* `Entity` - The offshore legal entity. This could be a company, trust,
+foundation, or other legal entity created in a low-tax jurisdiction.
+* `Officer` - A person or company who plays a role in an offshore
+entity, such as beneficiary, director, or shareholder. The relationships
+shown in the diagram are just a sample of all the existing ones.
+* `Intermediary` - A go-between for someone seeking an offshore
+corporation and an offshore service provider — usually a law-firm or a
+middleman that asks an offshore service provider to create an offshore
+firm.
+* `Address` - The registered address as it appears in the original
+databases obtained by ICIJ.
+* `Other` - Other entities found in the data.
+
+== How Graphs Helped our Investigation
+
+The Offshore Leaks data exposes a set of connections between people and
+offshore entities. Graph databases are the best way to explore the
+relationships between these people and entities — it’s much more
+intuitive to use for this purpose than a SQL database or other types of
+NoSQL databases.
+
+For example, let's say we want to discover the shortest paths between
+two entity officers through a set of `Entity` or `Address` nodes. This
+is quite easy with Cypher, Neo4j's graph query language.
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (a:Officer),(b:Officer)
+WHERE a.name CONTAINS 'Smith' 
+  AND b.name CONTAINS 'Grant'
+MATCH p=allShortestPaths((a)-[:OFFICER_OF|:INTERMEDIARY_OF|:REGISTERED_ADDRESS*..10]-(b))
+RETURN p
+LIMIT 50
+----
+
+To execute this query, please *click* on the statement above to put the
+query in the query editor above. +
+Hit the triangular [.icon]#__# button or press
+[.keyseq]#[.kbd]##Ctrl##+[.kbd]#Enter## to *run it* and see the
+resulting visualization.
+
+The resulting graph allows us to explore how these people are connected:
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/shortestPaths.png[image]
+
+== How to ask questions using a query language
+
+=== Graph Patterns
+
+Neo4j’s query language, Cypher, is centered around *graph patterns*
+which represents entities with parentheses, for example, `(e:Entity)`
+and connections with arrows, for example `-[:INTERMEDIARY_OF]->`.
+`:Entity` and `:INTERMEDIARY_OF` are the types of the entity and the
+connection, respectively.
+
+Here is an example pattern:
+`(:Intermediary)-[:INTERMEDIARY_OF]->(:Entity)`. These patterns may be
+found with the `MATCH` clause.
+
+=== Other Clauses
+
+The following clauses may follow a `MATCH` clause. They work with the
+properties stored at the nodes and relationships found in the graph
+matching that pattern.
+
+[width="100%",cols="15%,85%",]
+|===
+|filter |`WHERE intermediary.name CONTAINS 'MOSSACK'`
+|aggregate |`WITH e.jurisdiction AS country, COUNT(*) AS frequency`
+|return |`RETURN country, frequency`
+|order |`ORDER BY frequency DESC`
+|limit |`LIMIT 20;`
+|===
+
+Jurisdiction distribution of intermediaries in the ICIJ offshore leaks
+DB
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (intermediary:Intermediary)-[:INTERMEDIARY_OF]->(e:Entity)
+WHERE intermediary.name CONTAINS 'MOSSFON'
+RETURN e.jurisdiction AS country, COUNT(*) AS frequency
+ORDER BY frequency DESC LIMIT 20;
+----
+
+Click on the block to put the query in the topmost window on the query
+editor. Hit the triangular [.icon]#__# button or press
+[.keyseq]#[.kbd]##Ctrl##+[.kbd]#Enter## to run it and see the resulting
+visualization.
+
+== Explore the Panama and Paradise Papers Yourself
+
+ +
+
+== Further Resources
+
+* https://icij.org/paradisepapers/[The Paradise Papers ICIJ Site]
+* https://panamapapers.icij.org/[The Panama Papers ICIJ Site]
+* https://offshoreleaks.icij.org/[The Offshore Leaks Database]
+* https://neo4j.com/docs/cypher-refcard/current/[Cypher Reference Card]
+* https://neo4j.com/developer[Neo4j Developer Documentation]
+
+ +
+
+== Investigative Queries
+
+Explore the data yourself.
+
+* Cypher query language intro
+* Finding companies and individuals
+* Path finding
+
+Run Queries
+
+== Shape of the Data
+
+Understand the data model.
+
+* What are the nodes?
+* What are the relationships?
+* What are the properties?
+
+Start Learning
+
+== Send ICIJ a tip
+
+Help us investigate.
+
+* Interesting connections
+* Entities that matter to you
+
+Send tip
+
+* [.sl .sl-house]##
++
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+----
++
+Introduction
+* [.sl .sl-show]#Investigative queries#
+* [.sl .sl-network]#Shape of the data#
+
+* https://icij.org/[image:https://panamapapers.icij.org/assets/Logo_bg@2x.png[image,height=28]]
+* https://twitter.com/intent/tweet?original_referer=https%3A%2F%2Foffshoreleaks.icij.org%2F&ref_src=twsrc%5Etfw&text=Look%20what%20I%20have%20found%20in%20the%20%23Panama%20and%20Paradise%20Papers%20%40Neo4j%20graph%20database%20release%3A&tw_p=tweetbutton&url=https%3A%2F%2Foffshoreleaks.icij.org%2F[]

@@ -1,0 +1,570 @@
+== Querying the Data
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel_med.png[investigating]
+
+This guide covers:
+
+* Statistics
+* Visual vs Tabular Results
+* Investigating invidual people and entities
+* Finding x-degree relationships
+* Finding shortest paths and connections between entities
+* Frequently recurring pairs
+
+This interactive guide will help you explore the Paradise and Panama
+Papers and the Offshore Leaks data using Cypher, Neo4j’s graph query
+language.
+
+You’ll have the same investigative power we had in order to discover
+additional stories behind the data.
+
+Be sure to check out the shape of the data section to understand the
+basics of Cypher and the data model used in the graph database.
+
+== Overview
+
+ +
+
+=== Let’s see what data is in this database.
+
+Run the embedded query to examine graph structure that we have just
+created. We see nodes for each type of entity, connected by the
+relationships they have.
+
+=== Meta Graph
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL db.schema()
+----
+
+To execute this query, please *click* on the statement above to put the
+query in the query editor above. +
+Hit the triangular [.icon]#__# button or press
+[.keyseq]#[.kbd]##Ctrl##+[.kbd]#Enter## to *run it* and see the
+resulting visualization.
+
+==== Counts per entity type
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (node)
+RETURN labels(node) AS type,count(*)
+----
+
+We can also check how many entities of each type are in our database.
+
+==== Which intermediaries have the most connections to which entities
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (i:Intermediary) WHERE size( (i)--() ) > 100
+MATCH (i)-[connection]-(entity)
+RETURN i.name as intermediary, type(connection) as relationship, head(labels(entity)) as type, count(*) as count
+ORDER BY count DESC LIMIT 20
+----
+
+=== Filter datasource
+
+Note that the above query is searching the Offshore leaks, Paradise- and
+Panama Papers datasets. To filter for just one source, use a `WHERE`
+clause. For example:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (i:Intermediary) WHERE i.sourceID = "Panama Papers" AND size( (i)--() ) > 100
+MATCH (i)-[connection]-(entity)
+RETURN i.name as intermediary, type(connection) as relationship, head(labels(entity)) as type, count(*) as count
+ORDER BY count DESC LIMIT 20
+----
+
+== Query for visual results
+
+Querying the graph with Cypher is all about graph pattern matching. To
+query the graph we define graph patterns to be searched. For example, we
+can define the pattern "Intermediary connected to an `Entity` node
+through the `INTERMEDIARY_OF` relationship" as:
+
+....
+(i:Intermediary)-[r:INTERMEDIARY_OF]->(e:Entity)
+....
+
+We use variables `i`, `e` and `r` respectively for later filtering with
+`WHERE` and `RETURN`ing results, these are aliases that can be reused
+within a single Cypher statement.
+
+== Entities registered by an Intermediary
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (i:Intermediary)-[r:INTERMEDIARY_OF]->(e:Entity)
+WHERE i.name CONTAINS "MOSSACK"
+RETURN i, r, e LIMIT 100
+----
+
+The results of this query are visualized as a graph, you can switch
+between the graph visualization and tabular results with the icons on
+the left side of the results view.
+
+== Query for tabular results
+
+ +
+
+Let's query for the pattern "Officer node connected to an `Entity` node
+through `CONNECTED_TO` relationship:
+
+....
+(o:Officer)-[:CONNECTED_TO]->(:Entity)
+....
+
+We then `count` the entities per officer in an *aggregation* and
+`ORDER BY` that count `DESC`ending and return the top-10 results.
+
+=== Officers with most entities
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o:Officer)-[:BENEFICIARY_OF]->(:Entity)
+RETURN o.name, count(*) as entities
+ORDER BY entities DESC LIMIT 10
+----
+
+== Search for Officer nodes by name
+
+ +
+
+Enter any name (e.g. from our
+https://www.icij.org/investigations/[published investigations]) into the
+form then click on the query to execute to see if that person appears in
+the data. Note that this search is case sensitive and searches exact
+matches only. We're setting a parameter for the officer which we can
+reuse later, just click and run the `:param` block.
+
+Name of officer:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+:param officer:"A Name"
+----
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o:Officer)
+WHERE o.name CONTAINS $officer
+RETURN o
+LIMIT 100
+----
+
+After running the query, *you can double-click on any node to expand
+connections* in the graph around that node.
+
+== Search for an Officer and find the connections
+
+ +
+
+Let’s see with which entities our officer was involved with, including
+first and second degree connections.
+
+=== 1st degree
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o:Officer)
+WHERE o.name CONTAINS $officer
+MATCH path = (o)-[r]->(:Entity)
+RETURN path LIMIT 100
+----
+
+=== 2nd degree entities
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o:Officer) WHERE o.name CONTAINS $officer
+MATCH path = (o)-[]->(:Entity)
+      <-[]-(:Officer)-[]->(:Entity)
+RETURN path LIMIT 100
+----
+
+== Find who is behind an Entity and the roles that they play
+
+ +
+
+Name of entity:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+:param entity:"An Entity"
+----
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (e:Entity)-[r]-(o:Officer)
+WHERE e.name CONTAINS $entity
+RETURN *
+LIMIT 100
+----
+
+== Joint involvement
+
+ +
+
+When investigating, it is very important to identify people that appear
+to operate together. You can try to find if two officers appear
+connected to the same entities recurrently by using this query. Note
+that in this case, the first results show companies because companies
+can also be officers of entities.
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o1:Officer)-[r1]->(e:Entity)<-[r2]-(o2:Officer)
+USING JOIN ON e
+WHERE id(o1) < id(o2) AND size( (o1)-->() ) > 10 AND size( (o2)-->() ) > 10
+WITH o1,o2,count(*) as freq, collect(e)[0..10] as entities
+WHERE freq > 10
+WITH * ORDER BY freq DESC LIMIT 10
+RETURN o1.name, o2.name, freq, [e IN entities | e.name]
+----
+
+We can attempt to remove companies from the results by filtering our
+Officer names that contain strings commonly found in company names such
+as "LLC", "Limited", "Ltd", etc:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o1:Officer)-[r1]->(e:Entity)<-[r2]-(o2:Officer)
+USING JOIN ON e
+WHERE id(o1) < id(o2) AND NOT o1.name CONTAINS "LIMITED" AND NOT o1.name CONTAINS "Limited"
+AND NOT o2.name CONTAINS "Limited" AND NOT o2.name CONTAINS "LIMITED"
+AND size( (o1)-->() ) > 10 AND size( (o2)-->() ) > 10
+WITH o1,o2,count(*) as freq, collect(e)[0..10] as entities
+WHERE freq > 10
+WITH * ORDER BY freq DESC LIMIT 10
+RETURN o1.name, o2.name, freq, [e IN entities | e.name]
+----
+
+Lets visualize this graph with virtual relationships
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o1:Officer)-[r1]->(e:Entity)<-[r2]-(o2:Officer)
+USING JOIN ON e
+WHERE id(o1) < id(o2) AND NOT o1.name CONTAINS "LIMITED" AND NOT o1.name CONTAINS "Limited"
+AND NOT o2.name CONTAINS "Limited" AND NOT o2.name CONTAINS "LIMITED"
+AND size( (o1)-->() ) > 10 AND size( (o2)-->() ) > 10
+WITH o1,o2,count(*) as freq, collect(e)[0..10] as entities
+WHERE freq > 200
+RETURN o1,o2,apoc.create.vRelationship(o1,'JOINT',{freq:freq,entities:[e IN entities| e.name]},o2)
+----
+
+== Shortest path between two people
+
+ +
+
+Name of the first officer: Name of the second officer:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (a:Officer),(b:Officer)
+WHERE a.name CONTAINS 'Smith' AND b.name CONTAINS 'Grant'
+WITH a,b LIMIT 20000
+MATCH p=allShortestPaths((a)-[:OFFICER_OF|:INTERMEDIARY_OF|:REGISTERED_ADDRESS*..10]-(b))
+RETURN p
+LIMIT 50
+----
+
+== Query by address
+
+ +
+
+We can use Neo4j's string comparison functions to search for addresses
+that contain cities and countries in which we are interested:
+
+City: State/Country:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (a:Address)<-[:REGISTERED_ADDRESS]-(other)
+WHERE a.address CONTAINS 'Barcelona' AND a.address CONTAINS 'Spain'
+RETURN a, other
+LIMIT 100
+----
+
+== Offshore entity juridictions by intermediary
+
+ +
+
+What are the most popular offshore jurisdictions for certain
+intermediaries?
+
+Name of the intermediary:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (i:Intermediary)-[:INTERMEDIARY_OF]->(e:Entity)
+WHERE i.name CONTAINS 'MOSSACK'
+RETURN e.jurisdiction_description AS jurisdiction, count(*) AS number
+ORDER BY number DESC LIMIT 10
+----
+
+== Most popular offshore jurisdiction for people connected to a country
+
+ +
+
+What are the common offshore jurisdictions for officers with addresses
+in a certain country?
+
+Country code:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o:Officer)-->(e:Entity)<-[:INTERMEDIARY_OF]-(i:Intermediary)
+WHERE o.country_codes CONTAINS 'USA' and i.sourceID = 'Panama Papers'
+RETURN e.jurisdiction_description AS jurisdiction, count(*) AS number
+ORDER BY number DESC LIMIT 10
+----
+
+== Most popular offshore jurisdictions for people with addresses in a certain city
+
+ +
+
+What are the common offshore jurisdictions used by people connected to
+certain cities?
+
+City: State/country:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (a:Address)<-[:REGISTERED_ADDRESS]-(o:Officer),
+(o)-->(e:Entity)<-[:INTERMEDIARY_OF]-(i:Intermediary)
+WHERE a.address CONTAINS 'London' AND a.address CONTAINS 'United Kingdom'
+RETURN e.jurisdiction_description AS jurisdiction, count(*) AS number 
+ORDER BY number DESC LIMIT 10
+----
+
+== Most popular intermediaries for people with an address in a certain city?
+
+ +
+
+Who are the most common intermediaries for officers connected to
+addresses in certain places?
+
+State/country:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (a:Address)<-[:REGISTERED_ADDRESS]-(o:Officer),
+(o)-->(e:Entity)<-[:INTERMEDIARY_OF]-(i:Intermediary)
+WHERE a.address CONTAINS 'Isle of Man'
+RETURN i.name AS intermediary, count(DISTINCT e) AS number 
+ORDER BY number DESC LIMIT 10
+----
+
+== Full Text Search
+
+ +
+
+All the previous queries we run were searching the exact text of a node.
+However, you can also build an index to search the text of properties
+inside a node. Just like in a book where you look at the index to find a
+section that interest you, and then start reading from there.
+
+For that, you need to build the index first. It will take a little while
+since the procedure has to read through the entire database to create
+it.
+
+_We used Solr as a full text search engine to search across all data.
+But you can do the same in Neo4j directly, both use Apache Lucene under
+the hood for full text search._
+
+In order to use the full text search feature, we indexed our data by
+specifying all the properties we want to index. Here we create a full
+text index called `offshore` (we will use this name when searching in
+the index) with our data. *You don't have to run this, it's just here as
+an example*
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL apoc.index.addAllNodes('offshore',{
+  Officer: ["name","countries"],
+  Intermediary:  ["name","address","countries"],
+  Address: ["address","countries"],
+  Entity: ["name", "address", "service_provider", "former_name", "company_type","countries"]})
+----
+
+We can now use this index to search for any text contained in the
+properties. As a result of the query you'll get the nodes with matching
+text.
+
+The most simple case would be to search across all data for an exact
+match of a particular word.
+
+If you enter a word into the form, all occurrences will be found (but
+limited to 100 results).
+
+Word to search for:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL apoc.index.search("offshore", 'Nike')
+----
+
+== Full text search - advanced
+
+ +
+
+You can futher restrict the full text search to only searching in a
+particular property. In order to seach for an `Entity` incorporated by
+offshore service provider _Mossack Fonseca_, use the following:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL apoc.index.search("offshore", "Entity.service_provider:Mossack Fonseca")
+----
+
+=== Test it yourself:
+
+Label/Type to search for: Attribute to search for: Word to search for:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL apoc.index.search("offshore", "Entity.service_provider:Mossack Fonseca")
+----
+
+Now we can search for nodes with a specific property value, and then
+*explore their neighbourhoods visually by double-clicking* to expand
+relationships.
+
+== Full text search with graph patterns
+
+ +
+
+Previously we searched for nodes by matching against property values.
+However, integrating text search with an graph query is so much more
+powerful.
+
+We could for instance search for addresses in the database that contain
+the word "New York", and then find all entities registered at those
+addresses:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL apoc.index.search("offshore", 'Address.address:"New York"')
+YIELD node AS addr
+MATCH (addr)<-[:REGISTERED_ADDRESS]-(entity)
+RETURN addr, entity LIMIT 50
+----
+
+There may be typos in the data so we can use fuzzy matching to find
+addresses that have inconsistent spellings.
+
+Add a tilde (~) to instruct the index search procedure to do a fuzzy
+match, allowing you to find “Malta” even if the spelling is slightly
+off.
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL apoc.index.search("offshore", "Address.address:Malta~")
+YIELD node AS addr
+MATCH (addr)<-[:REGISTERED_ADDRESS]-(entity)
+RETURN addr, entity LIMIT 50
+----
+
+You might notice that there are addresses that contain the word
+“Barcelona” that are not in Barcelona, Spain.
+
+We can further specify that we want the text to contain both the word
+Barcelona, and the word Spain:
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL apoc.index.search("offshore", "+Address.address:Barcelona~ +Spain~")
+YIELD node AS addr
+MATCH (addr)<-[:REGISTERED_ADDRESS]-(entity)
+RETURN addr, entity LIMIT 50
+----
+
+For more details on the query syntax used in the second parameter of the
+`search` procedure, please see
+https://www.lucenetutorial.com/lucene-query-syntax.html[this Lucene
+query tutorial]
+
+== Graph Analytics
+
+ +
+
+PageRank is an algorithm used for instance by Google to rank websites in
+their search engine results. It assumes that more important entities are
+likely to have more connections pointing to them, and not just directly
+but also indirectly.
+
+The algorithm can also be used as way of measuring the importance of
+entities in a network. Let’s use PageRank to find the top 20 ranked
+entities in the dataset.
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL algo.pageRank.stream() YIELD node, score
+WHERE node:Entity
+RETURN node.name AS entity, score
+ORDER BY score DESC
+LIMIT 20
+----
+
+Now let’s try a similar query but investigating different patterns. The
+following detects the 10 top ranked addresses. It then finds how many
+entities are registered at those addresses. Note that the address nodes
+contain text that has not been standardized, therefore there may be
+inconsistencies in the address data.
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+CALL algo.pageRank.stream() YIELD node as address, score
+WHERE address:Address
+WITH * ORDER BY score DESC  LIMIT 10
+MATCH (address)<-[:REGISTERED_ADDRESS]-(e:Entity)
+RETURN address.address, count(e) AS count
+ORDER BY count DESC
+----
+
+== Explore the Panama and Paradise Papers Yourself
+
+ +
+
+== Further Resources
+
+* https://icij.org/paradisepapers/[The Paradise Papers ICIJ Site]
+* https://panamapapers.icij.org/[The Panama Papers ICIJ Site]
+* https://offshoreleaks.icij.org/[The Offshore Leaks Database]
+* https://neo4j.com/docs/cypher-refcard/current/[Cypher Reference Card]
+* https://neo4j.com/developer[Neo4j Developer Documentation]
+
+ +
+
+== Investigative Queries
+
+Explore the data yourself.
+
+* Cypher query language intro
+* Finding companies and individuals
+* Path finding
+
+Run Queries
+
+== Shape of the Data
+
+Understand the data model.
+
+* What are the nodes?
+* What are the relationships?
+* What are the properties?
+
+Start Learning
+
+== Send ICIJ a tip
+
+Help us investigate.
+
+* Interesting connections
+* Entities that matter to you
+
+Send tip

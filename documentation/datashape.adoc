@@ -1,0 +1,382 @@
+== The Shape of the Data
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel.png[data
+model]
+
+The Offshore Leaks Database contains in a structured way the contents of
+the more than 3 million database files inside the Paradise and Panama
+Papers leaks and the client databases from the Offshore Leaks
+investigation.
+
+The Offshore Leaks Database was imported into Neo4j to be used by
+journalists and researchers to take advantage of the connections in the
+data. To the left is the basic "property graph" data model. Each data
+record is called a "node" representing an entity, intermediary, officer
+or address. They're connected to form a "graph" that reveals a complex
+web of relationships. To the left you can see a simplified diagram how
+the nodes connect to each other.
+
+These are the types of nodes that you will encounter in the data:
+
+* `Entity` - The offshore legal entity. This could be a company, trust,
+foundation, or other legal entity created in a low-tax jurisdiction.
+* `Officer` - A person or company who plays a role in an offshore
+entity, such as beneficiary, director, or shareholder. The relationships
+shown in the diagram are just a sample of all the existing ones.
+* `Intermediary` - A go-between for someone seeking an offshore
+corporation and an offshore service provider — usually a law-firm or a
+middleman that asks an offshore service provider to create an offshore
+firm.
+* `Address` - The registered address as it appears in the original
+databases obtained by ICIJ.
+* `Other` - Other entities found in the data.
+
+== Cypher Introduction
+
+ +
+
+=== Graph Patterns
+
+Neo4j’s query language, Cypher, is centered around *graph patterns*
+which represents entities with parentheses, for example, +
+`(e:Entity)` and connections with arrows, for example
+`-[:INTERMEDIARY_OF]->`. `:Entity` and `:INTERMEDIARY_OF` are the types
+of the entity and the connection, respectively.
+
+Here is an example pattern:
+`(:Intermediary)-[:INTERMEDIARY_OF]->(:Entity)`. These patterns may be
+found with the `MATCH` clause.
+
+=== Other Clauses
+
+The following clauses may follow a `MATCH` clause. They work with the
+properties stored at the nodes and relationships found in the graph
+matching that pattern.
+
+filter
+
+`WHERE intermediary.name CONTAINS 'MOSSACK'`
+
+aggregate
+
+`WITH e.jurisdiction AS country, COUNT(*) AS frequency`
+
+return
+
+`RETURN country, frequency`
+
+order
+
+`ORDER BY frequency DESC`
+
+limit
+
+`LIMIT 20;`
+
+ +
+
+=== Jurisdiction distribution of Appleby Clients
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (intermediary:Intermediary)-[:INTERMEDIARY_OF]->(e:Entity)
+WHERE intermediary.name CONTAINS 'MOSSACK'
+RETURN e.jurisdiction AS country, COUNT(*) AS frequency
+ORDER BY frequency DESC LIMIT 20;
+----
+
+Click on the block to put the query in the topmost window on the query
+editor. Hit the triangular [.icon]#__# button or press
+[.keyseq]#[.kbd]##Ctrl##+[.kbd]#Enter## to run it and see the resulting
+visualization.
+
+== Nodes
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel.png[data
+model,scaledwidth=50.0%]
+
+Nodes are the entities in the graph. These are the types of nodes that
+you will encounter in the Paradise and Panama Papers data:
+
+* `Entity` - The offshore legal entity. This could be a entity, trust,
+foundation, or other legal entity.
+* `Officer` - Either the beneficiary, director, or shareholder of the
+offshore legal entity.
+* `Intermediary` - A go-between for someone seeking an offshore
+corporation and an offshore service provider — usually a law-firm or a
+middleman that asks an offshore service provider to create an offshore
+firm for a intermediary.
+* `Address` - The registered address according to the information on
+file.
+* `Other` - Other entities found in the data.
+
+== Relationships
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel.png[data
+model,scaledwidth=50.0%]
+
+Relationships connect the nodes in the graph.
+
+The following relationships appear in the data model:
+
+* `(:Intermediary)-[:INTERMEDIARY_OF]->(:Entity)`
+* `(:Officer|Intermediary)-[:UNDERLYING]->(:Intermediary|Officer)`
+* `(:Intermediary|Officer|Entity)-[:REGISTERED_ADDRESS]->(:Address)`
+* `(:Officer|Intermediary)-[:OFFICER_OF]->(:Entity)`
+
+All relationship types in the graph
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (n)-[r]->(m) 
+WITH labels(n) AS fromLabel,type(r) AS relType, collect(distinct head(labels(m))) AS toLabels, count(*) AS frequency 
+WHERE frequency > 1000
+RETURN fromLabel, relType,toLabels,frequency ORDER BY frequency DESC;
+----
+
+We will next walk through each node type and see what properties are
+available for each.
+
+== Intermediary
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel.png[data
+model,scaledwidth=50.0%]
+
+Each `Intermediary` node represents a go-between for someone seeking an
+offshore corporation and an offshore service provider — usually a
+law-firm or a middleman that asks an offshore service provider to create
+an offshore firm for a intermediary.
+
+== Properties
+
+Each `Intermediary` node has the following properties:
+
+* `name` - The name of the intermediary.
+* `address` - The address of the intermediary.
+* `sourceID` - `Offshore Leaks` `Panama Papers` or `Paradise Papers`
+depending on the data’s source
+* `status`
+* `valid_until`
+* `country_codes,countries`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (i:Intermediary) RETURN i LIMIT 25;
+----
+
+== Relationships
+
+* `(:Intermediary)-[:INTERMEDIARY_OF]->(:Entity)`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(:Intermediary)-[:INTERMEDIARY_OF]->(:Entity) RETURN p LIMIT 25;
+----
+
+* `(:Intermediary|Officer|Entity)-[:REGISTERED_ADDRESS]->(:Address)`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(:Intermediary)-[:REGISTERED_ADDRESS]->(:Address) RETURN p LIMIT 25;
+----
+
+* `(:Officer|Intermediary)-[:OFFICER_OF]->(:Entity)`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(:Intermediary)-[:OFFICER_OF]->(:Entity) RETURN p LIMIT 25;
+----
+
+== Entity
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel_med.png[data
+model,scaledwidth=50.0%]
+
+Each `Entity` is a company, trust or fund created in a low-tax, offshore
+jurisdiction by an agent.
+
+== Properties
+
+Each `Entity` node has the following properties:
+
+* `name` - The name of the legal entity.
+* `sourceID` - `Offshore Leaks` `Panama Papers` or `Paradise Papers`
+depending on the data’s source
+* `address` - This field includes the registered address connected to
+the entity only when the address is the same as the one of the
+intermediary. Otherwise, the registered address information is stored in
+the address node connected to this Entity node through a
+REGISTERED_ADDRESS relationship.
+* `former_name, original_name`
+* `company_type`
+* `status`
+* `incorporation_date, inactivation_date, struck_off_date, dorm_date` -
+dates for events in the company's development
+* `service_provider`
+* `ibcRUC`
+* `valid_until`
+* `jurisdiction, jurisdiction_description`
+* `country_codes, countries`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (e:Entity) RETURN e LIMIT 25;
+----
+
+== Relationships
+
+* `(:Intermediary)-[:INTERMEDIARY_OF]->(:Entity)` - The relationship
+showing the intermediary that oversaw the creation of the entity.
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(:Intermediary)-[:INTERMEDIARY_OF]->(:Entity) RETURN p LIMIT 25;
+----
+
+* `(:Intermediary|Officer|Entity)-[:REGISTERED_ADDRESS]->(:Address)` -
+The registered address of the entity.
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(:Entity)-[:REGISTERED_ADDRESS]->(:Address) RETURN p LIMIT 25;
+----
+
+* `(:Entity)-[:RELATED_ENTITY]->(:Entity)` - Entities that in the leaked
+documents were connected to each other.
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(:Entity)-[:RELATED_ENTITY]->(:Entity) RETURN p LIMIT 25;
+----
+
+== Officer
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel_med.png[data
+model,scaledwidth=50.0%]
+
+Each `Officer` node represents the beneficiary, director, or shareholder
+of the offshore legal entity, such as a beneficiary, shareholder, or
+director, etc.
+
+== Properties
+
+`Officer` nodes have the following properties:
+
+* `name`
+* `valid_until`
+* `sourceID` - `Offshore Leaks` `Panama Papers` or `Paradise Papers`
+depending on the data’s source
+* `country_codes, countries`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (o:Officer) RETURN o LIMIT 25;
+----
+
+== Relationships
+
+* `(:Intermediary|Officer|Entity)-[:REGISTERED_ADDRESS]->(:Address)`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(:Officer)-[:REGISTERED_ADDRESS]->(:Address) RETURN p LIMIT 25;
+----
+
+* `(:Officer)-[:OFFICER_OF]->(:Entity)`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(:Officer)-[:OFFICER_OF]->(:Entity) RETURN p LIMIT 25;
+----
+
+* `(:Officer|Intermediary)-[:UNDERLYING]->(:Intermediary|Officer)` These
+are relationships such as `NOMINEE_DIRECTOR_OF`, representing people
+that are acting as nominees of others. This applies to all relationship
+types beginning with `NOMINEE_`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=(o:Officer)-[:NOMINEE_DIRECTOR_OF]->(:Intermediary) RETURN p LIMIT 25;
+----
+
+== Address
+
+image:https://offshoreleaks-data.icij.org/offshoreleaks/neo4j/guide/img/datamodel_med.png[data
+model,scaledwidth=50.0%]
+
+The `Address` node represents the address as found on file for the
+`Intermediary`, `Officer`, or `Entity`.
+
+== Properties
+
+`Address` nodes have the following properties:
+
+* `address` - the address as it appears in the records
+* `sourceID` - `Offshore Leaks` `Panama Papers` or `Paradise Papers`
+depending on the data’s source
+* `valid_until`
+* `country_codes, countries`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH (a:Address) RETURN a LIMIT 25;
+----
+
+== Relationships
+
+* `(:Intermediary|Officer|Entity)-[:REGISTERED_ADDRESS]->(:Address)`
+
+[source,highlight,pre-scrollable,code,runnable,standalone-example,ng-binding]
+----
+MATCH p=()-[:REGISTERED_ADDRESS]->(:Address) RETURN p LIMIT 25;
+----
+
+== Explore the Panama and Paradise Papers Yourself
+
+ +
+
+== Further Resources
+
+* https://icij.org/paradisepapers/[The Paradise Papers ICIJ Site]
+* https://panamapapers.icij.org/[The Panama Papers ICIJ Site]
+* https://offshoreleaks.icij.org/[The Offshore Leaks Database]
+* https://neo4j.com/docs/cypher-refcard/current/[Cypher Reference Card]
+* https://neo4j.com/developer[Neo4j Developer Documentation]
+
+ +
+
+== Investigative Queries
+
+Explore the data yourself.
+
+* Cypher query language intro
+* Finding companies and individuals
+* Path finding
+
+Run Queries
+
+== Shape of the Data
+
+Understand the data model.
+
+* What are the nodes?
+* What are the relationships?
+* What are the properties?
+
+Start Learning
+
+== Send ICIJ a tip
+
+Help us investigate.
+
+* Interesting connections
+* Entities that matter to you
+
+Send tip
+
+* [.sl .sl-house]#Introduction#
+* [.sl .sl-show]#Investigative queries#
+* [.sl .sl-network-trio]#Shape of the data#
+
+* https://icij.org/paradisepapers/[image:https://panamapapers.icij.org/assets/Logo_bg@2x.png[image,height=28]]
+* https://twitter.com/intent/tweet?original_referer=https%3A%2F%2Foffshoreleaks.icij.org%2F&ref_src=twsrc%5Etfw&text=Look%20what%20I%20have%20found%20in%20the%20%23Paradise%20and%20Papers%20%40Neo4j%20graph%20database%20release%3A&tw_p=tweetbutton&url=https%3A%2F%2Foffshoreleaks.icij.org%2F[]
