@@ -7,7 +7,7 @@ const driver = neo4j.driver('bolt://<HOST>:<BOLTPORT>',
 
 const query =
   `
-  MATCH (a:Officer {name: $name})-[r:OFFICER_OF|INTERMEDIARY_OF|REGISTERED_ADDRESS*..5]-(b)
+  MATCH (a:Officer {name: $name})-[r:OFFICER_OF|INTERMEDIARY_OF|REGISTERED_ADDRESS*..5]-(b) 
   RETURN distinct b.name as name LIMIT 20
   `;
 
